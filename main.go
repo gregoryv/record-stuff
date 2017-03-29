@@ -10,12 +10,26 @@ import (
 	"github.com/gorilla/mux"
 	"time"
 	"fmt"
+	"path"
+	"encoding/json"
 )
+
+const (
+	OUT = "/tmp/recordings"
+)
+
+func init() {
+	err := os.Mkdir(OUT, 0777)
+	if err != nil && !os.IsExist(err) {
+		panic(err)
+	}
+}
+
 
 func recordHandler(ws *websocket.Conn) {
 	var data []byte
 	websocket.Message.Receive(ws, &data)
-	ioutil.WriteFile("/tmp/out.wav", data, 0777)
+	ioutil.WriteFile(path.Join(OUT, "out.wav"), data, 0777)
 	ws.Write([]byte("saved"))
 	// to keep websocket open you cannot return here
 }
@@ -28,7 +42,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-	out := "/tmp/" + r.FormValue("filename")
+	out := path.Join(OUT, r.FormValue("filename"))
 	f, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println(err)
@@ -50,6 +64,24 @@ func homeHandler(w http.ResponseWriter, r *http.Request)  {
 	io.Copy(w, fh)
 }
 
+func listRecordings(w http.ResponseWriter, r *http.Request) {
+	files, err := ioutil.ReadDir(OUT)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Print("Listing")
+	names := make([]string,len(files))
+	for i, file := range files {
+		names[i] = "/recordings/" + file.Name()
+	}
+	enc := json.NewEncoder(w)
+	err = enc.Encode(names)
+	if err != nil {
+		fmt.Fprint(w, err)
+		return
+	}
+}
+
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", homeHandler)
@@ -57,9 +89,10 @@ func main() {
 	r.PathPrefix("/recordings/{name}.wav").Handler(
 		http.StripPrefix(
 			"/recordings/",
-			http.FileServer(http.Dir("/tmp")),
+			http.FileServer(http.Dir(OUT)),
 		),
 	)
+	r.HandleFunc("/recordings/", listRecordings)		
 	r.HandleFunc("/upload", uploadHandler)
 	r.Handle("/record", websocket.Handler(recordHandler))
     http.Handle("/", r)

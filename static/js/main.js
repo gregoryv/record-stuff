@@ -77,8 +77,12 @@ function postSound(blob) {
     }).done(function(data) {
 	console.log(data);
 	var href = "/recordings/"+ filename;
-	$("#recordings").append("<li><a href=\"" + href + "\">" + timestamp + "</a></li>");
+	newLi(href, timestamp);
     });
+}
+
+function newLi(href, name) {
+    $("#recordings").append("<li><a href=\"" + href + "\">" + name + "</a></li>");
 }
 
 function toggleRecording( e ) {
@@ -142,9 +146,16 @@ function initAudio() {
             alert('Error getting audio');
             console.log(e);
         });
-
 }
 
-
+function loadRecordings() {
+ $(function() {
+     $.getJSON("/recordings/", function(data) {
+	 $(data).each(function(i, el) {
+	     newLi(el, el);
+	 });
+     });
+ });
+}
 
 window.addEventListener('load', initAudio );
