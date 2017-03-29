@@ -64,7 +64,9 @@ function sendViaWebsocket( blob ) {
 
 function postSound(blob) {
     var fd = new FormData();
-    fd.append('other', 'some data');    
+    var timestamp = new Date();
+    var filename = Math.floor(timestamp) + ".wav";
+    fd.append('filename', filename);
     fd.append('soundBlob', blob);
     $.ajax({
 	type: 'POST',
@@ -74,6 +76,8 @@ function postSound(blob) {
 	contentType: false
     }).done(function(data) {
 	console.log(data);
+	var href = "/recording/"+ filename;
+	$("#recordings").append("<li><a href=\"" + href + "\">" + timestamp + "</a></li>");
     });
 }
 
@@ -94,7 +98,7 @@ function toggleRecording( e ) {
     }
 }
 
-
+// Called when microphone is activated
 function gotStream(stream) {
     inputPoint = audioContext.createGain();
 

@@ -19,20 +19,21 @@ func recordHandler(ws *websocket.Conn) {
 
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20)
-	file, handler, err := r.FormFile("soundBlob")
+	file, _, err := r.FormFile("soundBlob")
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	defer file.Close()
-	f, err := os.OpenFile("/tmp/out.wav", os.O_WRONLY|os.O_CREATE, 0666)
+	out := "/tmp/" + r.FormValue("filename")
+	f, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	defer f.Close()
 	io.Copy(f, file)
-	log.Printf("%v", handler.Header)	
+	log.Printf("%v", out)
 }
 
 func main() {
