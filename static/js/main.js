@@ -65,7 +65,7 @@ function sendViaWebsocket( blob ) {
 function postSound(blob) {
     var fd = new FormData();
     var timestamp = new Date();
-    var filename = Math.floor(timestamp) + ".wav";
+    var filename = timestamp.getTime() + ".wav";
     fd.append('filename', filename);
     fd.append('soundBlob', blob);
     $.ajax({
@@ -152,7 +152,8 @@ function loadRecordings() {
  $(function() {
      $.getJSON("/recordings/", function(data) {
 	 $(data).each(function(i, el) {
-	     newLi(el, el);
+	     var parts = el.name.split(".")
+	     newLi(el.href, new Date(+parts[0]));
 	 });
      });
  });

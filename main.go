@@ -64,15 +64,23 @@ func homeHandler(w http.ResponseWriter, r *http.Request)  {
 	io.Copy(w, fh)
 }
 
+type Rec struct {
+	Href string `json:"href"`
+	Name string `json:"name"`
+}
+
 func listRecordings(w http.ResponseWriter, r *http.Request) {
 	files, err := ioutil.ReadDir(OUT)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Print("Listing")
-	names := make([]string,len(files))
+	names := make([]Rec,len(files))
 	for i, file := range files {
-		names[i] = "/recordings/" + file.Name()
+		names[i] = Rec{
+			Href: "/recordings/" + file.Name(),
+			Name: file.Name(),
+		}
 	}
 	enc := json.NewEncoder(w)
 	err = enc.Encode(names)
