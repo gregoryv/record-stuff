@@ -54,6 +54,12 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", homeHandler)
 	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir(".")))
+	r.PathPrefix("/recordings/{name}.wav").Handler(
+		http.StripPrefix(
+			"/recordings/",
+			http.FileServer(http.Dir("/tmp")),
+		),
+	)
 	r.HandleFunc("/upload", uploadHandler)
 	r.Handle("/record", websocket.Handler(recordHandler))
     http.Handle("/", r)

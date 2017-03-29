@@ -76,7 +76,7 @@ function postSound(blob) {
 	contentType: false
     }).done(function(data) {
 	console.log(data);
-	var href = "/recording/"+ filename;
+	var href = "/recordings/"+ filename;
 	$("#recordings").append("<li><a href=\"" + href + "\">" + timestamp + "</a></li>");
     });
 }
