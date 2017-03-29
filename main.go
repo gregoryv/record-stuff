@@ -1,9 +1,12 @@
 package main
 
 import (
-	"net/http"
 	"golang.org/x/net/websocket"
 	"io/ioutil"
+	"net/http"
+	"os"
+	"io"
+	"log"
 )
 
 func recordHandler(ws *websocket.Conn) {
@@ -14,7 +17,26 @@ func recordHandler(ws *websocket.Conn) {
 	// to keep websocket open you cannot return here
 }
 
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseMultipartForm(32 << 20)
+	file, handler, err := r.FormFile("soundBlob")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer file.Close()
+	f, err := os.OpenFile("/tmp/out.wav", os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer f.Close()
+	io.Copy(f, file)
+	log.Printf("%v", handler.Header)	
+}
+
 func main() {
+	http.HandleFunc("/upload", uploadHandler)
 	http.Handle("/record", websocket.Handler(recordHandler))
 	http.Handle("/", http.FileServer(http.Dir(".")))
 	// getUserMedia will not work on insecure origins

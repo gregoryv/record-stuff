@@ -53,7 +53,7 @@ function waitForSocketConnection(socket, callback){
 }
 
 
-function doneEncoding( blob ) {
+function sendViaWebsocket( blob ) {
     ws = new WebSocket("ws://localhost:8080/record");
     ws.binaryType = "blob"
     setTimeout(function() {
@@ -62,13 +62,28 @@ function doneEncoding( blob ) {
     }, 20);
 }
 
+function postSound(blob) {
+    var fd = new FormData();
+    fd.append('other', 'some data');    
+    fd.append('soundBlob', blob);
+    $.ajax({
+	type: 'POST',
+	url: '/upload',
+	data: fd,
+	processData: false,
+	contentType: false
+    }).done(function(data) {
+	console.log(data);
+    });
+}
 
 function toggleRecording( e ) {
     if (e.classList.contains("recording")) {
         // stop recording
         audioRecorder.stop();
         e.classList.remove("recording");
-       audioRecorder.exportWAV( doneEncoding );
+	// audioRecorder.exportWAV( sendViaWebsocket );
+	audioRecorder.exportWAV( postSound );
     } else {
         // start recording
         if (!audioRecorder)
@@ -78,6 +93,7 @@ function toggleRecording( e ) {
         audioRecorder.record();
     }
 }
+
 
 function gotStream(stream) {
     inputPoint = audioContext.createGain();
