@@ -1,0 +1,27 @@
+html { overflow: hidden; }
+body { 
+    font: 14pt Arial, sans-serif; 
+    background: lightgrey;
+    margin: 40px 40px;
+}
+h1 {
+    text-align: center;
+}
+h1 span {
+    font-size: 0.6em;
+}
+#controls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    height: 20%;
+    width: 100%;
+}
+
+#record.recording { 
+    background: red;
+    background: -webkit-radial-gradient(center, ellipse cover, #ff0000 0%,lightgrey 75%,lightgrey 100%,#7db9e8 100%); 
+    background: -moz-radial-gradient(center, ellipse cover, #ff0000 0%,lightgrey 75%,lightgrey 100%,#7db9e8 100%); 
+    background: radial-gradient(center, ellipse cover, #ff0000 0%,lightgrey 75%,lightgrey 100%,#7db9e8 100%); 
+}

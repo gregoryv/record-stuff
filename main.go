@@ -7,6 +7,9 @@ import (
 	"os"
 	"io"
 	"log"
+	"github.com/gorilla/mux"
+	"time"
+	"fmt"
 )
 
 func recordHandler(ws *websocket.Conn) {
@@ -36,13 +39,36 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v", out)
 }
 
+func homeHandler(w http.ResponseWriter, r *http.Request)  {
+	fh, err := os.Open("static/index.html")
+	if err != nil {
+		log.Print(err)
+		fmt.Fprint(w, "404 not found")
+		return
+	}
+	defer fh.Close()
+	io.Copy(w, fh)
+}
+
 func main() {
-	http.HandleFunc("/upload", uploadHandler)
-	http.Handle("/record", websocket.Handler(recordHandler))
-	http.Handle("/", http.FileServer(http.Dir(".")))
+	r := mux.NewRouter()
+	r.HandleFunc("/", homeHandler)
+	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir(".")))
+	r.HandleFunc("/upload", uploadHandler)
+	r.Handle("/record", websocket.Handler(recordHandler))
+    http.Handle("/", r)
+	
 	// getUserMedia will not work on insecure origins
 	// https://goo.gl/Y0ZkNV
-	err := http.ListenAndServe(":8080", nil)
+	
+	srv := &http.Server{
+        Handler:      r,
+        Addr:         ":8080",
+		// Good practice: enforce timeouts for servers you create!
+        WriteTimeout: 15 * time.Second,
+        ReadTimeout:  15 * time.Second,
+	}
+	err := srv.ListenAndServe()
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
 	}
