@@ -116,6 +116,7 @@ func listRecordings(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := mux.NewRouter()
+	r.HandleFunc("/", WriteServiceSpec)
 	r.HandleFunc("/app", WriteDemoApp)
 	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir(".")))
 	r.PathPrefix("/recordings/{name}.wav").Handler(
@@ -145,4 +146,17 @@ func main() {
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
 	}
+}
+
+// Spec documents how to access the various API's of this service
+type Spec struct{}
+
+func WriteServiceSpec(w http.ResponseWriter, r *http.Request) {
+	spec := &Spec{}
+	enc := json.NewEncoder(w)
+	err := enc.Encode(spec)
+	if err != nil {
+		log.Print(err)
+	}
+
 }
