@@ -1,23 +1,25 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/gorilla/mux"
 	"golang.org/x/net/websocket"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"io"
-	"log"
-	"github.com/gorilla/mux"
-	"time"
-	"fmt"
 	"path"
-	"encoding/json"
+	"time"
 )
 
 const (
+	// Where the recordings are stored
 	OUT = "/tmp/recordings"
 )
 
+// init makes sure there is a place for the recordings
 func init() {
 	err := os.Mkdir(OUT, 0777)
 	if err != nil && !os.IsExist(err) {
@@ -25,12 +27,33 @@ func init() {
 	}
 }
 
-
+// The stream from a client will come in chunks
 func recordHandler(ws *websocket.Conn) {
-	var data []byte
-	websocket.Message.Receive(ws, &data)
-	ioutil.WriteFile(path.Join(OUT, "out.wav"), data, 0777)
-	ws.Write([]byte("saved"))
+	log.Print("Connected")
+	// Connection ends if nothing is received if deadline is reached
+	deadline := time.Now().Add(time.Second * 5)
+	ws.SetDeadline(deadline)
+
+	tofile := path.Join(OUT, "rec.wav")
+	file, err := os.Create(tofile)
+	if err != nil {
+		panic(err)
+	}
+
+	for {
+		var data []byte
+		websocket.Message.Receive(ws, &data)
+		if len(data) == 0 {
+			// client closed connection
+			break
+		}
+		n, err := file.Write(data)
+		if err != nil {
+			log.Print(err)
+		}
+		log.Printf("Saved %d bytes to %s", n, tofile)
+	}
+	file.Close()
 	// to keep websocket open you cannot return here
 }
 
@@ -53,7 +76,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v", out)
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request)  {
+func WriteDemoApp(w http.ResponseWriter, r *http.Request) {
 	fh, err := os.Open("static/index.html")
 	if err != nil {
 		log.Print(err)
@@ -69,13 +92,14 @@ type Rec struct {
 	Name string `json:"name"`
 }
 
+// listRecordings writes json array of recordings
 func listRecordings(w http.ResponseWriter, r *http.Request) {
 	files, err := ioutil.ReadDir(OUT)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Print("Listing")
-	names := make([]Rec,len(files))
+	names := make([]Rec, len(files))
 	for i, file := range files {
 		names[i] = Rec{
 			Href: "/recordings/" + file.Name(),
@@ -92,28 +116,30 @@ func listRecordings(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := mux.NewRouter()
-	r.HandleFunc("/", homeHandler)
+	r.HandleFunc("/app", WriteDemoApp)
 	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir(".")))
 	r.PathPrefix("/recordings/{name}.wav").Handler(
 		http.StripPrefix(
 			"/recordings/",
 			http.FileServer(http.Dir(OUT)),
 		),
-	)
-	r.HandleFunc("/recordings/", listRecordings)		
+	).Methods("GET")
+	r.HandleFunc("/recordings/", listRecordings).Methods("GET")
 	r.HandleFunc("/upload", uploadHandler)
+	// Its up to the client to decide where the recording is saved
+	// TODO maybe better to use /recordings with different schema or eg. without .wav
 	r.Handle("/record", websocket.Handler(recordHandler))
-    http.Handle("/", r)
-	
+	http.Handle("/", r)
+
 	// getUserMedia will not work on insecure origins
 	// https://goo.gl/Y0ZkNV
-	
+
 	srv := &http.Server{
-        Handler:      r,
-        Addr:         ":8080",
+		Handler: r,
+		Addr:    ":8080",
 		// Good practice: enforce timeouts for servers you create!
-        WriteTimeout: 15 * time.Second,
-        ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
 	}
 	err := srv.ListenAndServe()
 	if err != nil {

@@ -25,13 +25,6 @@ var analyserContext = null;
 var canvasWidth, canvasHeight;
 
 
-function sendMessage(msg){
-    // Wait until the state of the socket is not ready and send the message when it is...
-    waitForSocketConnection(ws, function(){
-        console.log("message sent!!!");
-        ws.send(msg);
-    });
-}
 
 // Make the function wait until the connection is made...
 function waitForSocketConnection(socket, callback){
@@ -52,15 +45,6 @@ function waitForSocketConnection(socket, callback){
         }, 5); // wait 5 milisecond for the connection...
 }
 
-
-function sendViaWebsocket( blob ) {
-    ws = new WebSocket("ws://localhost:8080/record");
-    ws.binaryType = "blob"
-    setTimeout(function() {
-        ws.send(blob);
-	console.log(blob);
-    }, 20);
-}
 
 function postSound(blob) {
     var fd = new FormData();
@@ -85,20 +69,49 @@ function newLi(href, name) {
     $("#recordings").append("<li><a href=\"" + href + "\">" + name + "</a></li>");
 }
 
+var ws;
+var chunkerId;
+
 function toggleRecording( e ) {
+    var useWebsocket = true;
     if (e.classList.contains("recording")) {
-        // stop recording
-        audioRecorder.stop();
         e.classList.remove("recording");
-	// audioRecorder.exportWAV( sendViaWebsocket );
-	audioRecorder.exportWAV( postSound );
+	
+	if(useWebsocket) {
+	    audioRecorder.stop();
+	    clearInterval(chunkerId);
+	    console.log("Closing socket connection");
+	    ws.close();
+	} else {
+            audioRecorder.stop();
+	    audioRecorder.exportWAV( postSound );
+	}
     } else {
         // start recording
         if (!audioRecorder)
             return;
         e.classList.add("recording");
-        audioRecorder.clear();
-        audioRecorder.record();
+	if(useWebsocket) {
+	    // sound is send in chunks 
+	    ws = new WebSocket("ws://localhost:8080/record");
+	    ws.binaryType = "blob"
+	    waitForSocketConnection(ws, function(){
+		chunkerId = setInterval( function(){
+		    // Issue here, cannot export unless recorder is stopped, not good!
+		    audioRecorder.stop();
+		    audioRecorder.exportWAV(function(chunk) {
+			audioRecorder.clear();						
+			audioRecorder.record();
+			console.log("Send chunk");			
+			ws.send(chunk);
+		    });
+
+		}, 1000);
+	    });
+	} else {
+            audioRecorder.clear();
+            audioRecorder.record();
+	}
     }
 }
 
@@ -125,7 +138,7 @@ function gotStream(stream) {
 
 function initAudio() {
         if (!navigator.getUserMedia)
-            navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+            navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mediaDevices.getUserMedia;
         if (!navigator.cancelAnimationFrame)
             navigator.cancelAnimationFrame = navigator.webkitCancelAnimationFrame || navigator.mozCancelAnimationFrame;
         if (!navigator.requestAnimationFrame)
