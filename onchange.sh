@@ -8,9 +8,10 @@ nameonly="${filename%.*}"
 
 case $extension in
     go)
-	gofmt -w $path
-	go test -cover
-        go install github.com/gregoryv/record-stuff
+        gofmt -w $path
+	go test -cover -coverprofile /tmp/c.out .
+        go tool cover -html=/tmp/c.out -o /tmp/coverage.html
+	go install github.com/gregoryv/record-stuff
         ;;
 esac
 
