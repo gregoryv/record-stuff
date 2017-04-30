@@ -13,7 +13,7 @@ func main() {
 	// Register routes
 	r := mux.NewRouter()
 	initRecordHandlers(r)
-	initUploadHandlers(r)
+	//initUploadHandlers(r)
 
 	// API documentation route
 	r.HandleFunc("/", api.WriteServiceSpec)
