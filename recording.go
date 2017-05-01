@@ -34,7 +34,7 @@ func init() {
 
 func initRecordHandlers(r *mux.Router) {
 	// Get one specific recording
-	upath := "/recordings/{name}.wav"
+	upath := "/recordings/{name:[a-z]+}.wav"
 	r.PathPrefix(upath).Handler(
 		http.StripPrefix(
 			"/recordings/",
@@ -49,7 +49,7 @@ func initRecordHandlers(r *mux.Router) {
 	api.Doc("GET", upath, "Returns list of all recordings").Resource = "Rec"
 
 	// Its up to the client to decide where the recording is saved
-	upath = "/recordings/{saveas}"
+	upath = "/recordings/{saveas:[a-z]+}"
 	r.Handle(upath, websocket.Handler(recordHandler))
 	api.Doc("", upath, "Websocket to stream audio to").Schemes = "ws"
 }
@@ -83,8 +83,9 @@ func recordHandler(ws *websocket.Conn) {
 	deadline := time.Now().Add(time.Second * 5)
 	ws.SetDeadline(deadline)
 
-	//uparts := mux.Vars(ws.Request())
-	tofile := path.Join(OUT, "rec.wav")
+	uparts := mux.Vars(ws.Request())
+	filename := uparts["saveas"]
+	tofile := path.Join(OUT, filename)
 	file, err := os.Create(tofile)
 	if err != nil {
 		panic(err)
