@@ -32,34 +32,26 @@ func init() {
 	}
 }
 
-// The stream from a client will come in chunks
-func recordHandler(ws *websocket.Conn) {
-	log.Print("Connected")
-	// Connection ends if nothing is received if deadline is reached
-	deadline := time.Now().Add(time.Second * 5)
-	ws.SetDeadline(deadline)
+func initRecordHandlers(r *mux.Router) {
+	// Get one specific recording
+	upath := "/recordings/{name}.wav"
+	r.PathPrefix(upath).Handler(
+		http.StripPrefix(
+			"/recordings/",
+			http.FileServer(http.Dir(OUT)),
+		),
+	).Methods("GET")
+	api.Doc("GET", upath, "Returns the recorded audio")
 
-	tofile := path.Join(OUT, "rec.wav")
-	file, err := os.Create(tofile)
-	if err != nil {
-		panic(err)
-	}
+	// List available recordings
+	upath = "/recordings/"
+	r.HandleFunc(upath, listRecordings).Methods("GET")
+	api.Doc("GET", upath, "Returns list of all recordings").Resource = "Rec"
 
-	for {
-		var data []byte
-		websocket.Message.Receive(ws, &data)
-		if len(data) == 0 {
-			// client closed connection
-			break
-		}
-		n, err := file.Write(data)
-		if err != nil {
-			log.Print(err)
-		}
-		log.Printf("Saved %d bytes to %s", n, tofile)
-	}
-	file.Close()
-	// to keep websocket open you cannot return here
+	// Its up to the client to decide where the recording is saved
+	upath = "/recordings/{saveas}"
+	r.Handle(upath, websocket.Handler(recordHandler))
+	api.Doc("", upath, "Websocket to stream audio to").Schemes = "ws"
 }
 
 // listRecordings writes json array of recordings
@@ -84,22 +76,39 @@ func listRecordings(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func initRecordHandlers(r *mux.Router) {
-	upath := "/recordings/{name}.wav"
-	r.PathPrefix(upath).Handler(
-		http.StripPrefix(
-			"/recordings/",
-			http.FileServer(http.Dir(OUT)),
-		),
-	).Methods("GET")
-	api.Doc("GET", upath, "Returns the recorded audio")
+// The stream from a client will come in chunks
+func recordHandler(ws *websocket.Conn) {
+	log.Print("Connected")
+	// Connection ends if nothing is received before deadline
+	deadline := time.Now().Add(time.Second * 5)
+	ws.SetDeadline(deadline)
 
-	upath = "/recordings/"
-	r.HandleFunc(upath, listRecordings).Methods("GET")
-	api.Doc("GET", upath, "Returns list of all recordings").Resource = "Rec"
+	//uparts := mux.Vars(ws.Request())
+	tofile := path.Join(OUT, "rec.wav")
+	file, err := os.Create(tofile)
+	if err != nil {
+		panic(err)
+	}
 
-	// Its up to the client to decide where the recording is saved
-	// TODO maybe better to use /recordings with different schema or eg. without .wav
-	r.Handle("/record", websocket.Handler(recordHandler))
-
+	for {
+		var data []byte
+		websocket.Message.Receive(ws, &data)
+		if len(data) == 0 {
+			// client closed connection
+			break
+		}
+		n, err := file.Write(data)
+		if err != nil {
+			log.Print(err)
+		}
+		log.Printf("Saved %d bytes to %s", n, tofile)
+	}
+	file.Close()
+	// to keep websocket open you cannot return here
 }
+
+/*
+How to create bidirectional websocket streams using gorilla/websocket
+
+https://jacobmartins.com/2016/03/07/practical-golang-using-websockets/
+*/

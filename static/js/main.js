@@ -25,20 +25,23 @@ var analyserContext = null;
 var canvasWidth, canvasHeight;
 
 
-
 // Make the function wait until the connection is made...
 function waitForSocketConnection(socket, callback){
     setTimeout(
         function () {
+	    if (socket.readyState === 3) {
+		console.log("Failed to connect");
+		return;
+	    }
             if (socket.readyState === 1) {
                 console.log("Connection is made")
                 if(callback != null){
                     callback();
                 }
                 return;
-
-            } else {
-                console.log("wait for connection...")
+            }
+	    else {
+                console.log("wait for connection... " + socket.readyState);
                 waitForSocketConnection(socket, callback);
             }
 
@@ -48,8 +51,7 @@ function waitForSocketConnection(socket, callback){
 
 function postSound(blob) {
     var fd = new FormData();
-    var timestamp = new Date();
-    var filename = timestamp.getTime() + ".wav";
+    var filename = getFilename();
     fd.append('filename', filename);
     fd.append('soundBlob', blob);
     $.ajax({
@@ -72,6 +74,12 @@ function newLi(href, name) {
 var ws;
 var chunkerId;
 
+function getFilename() {
+    var timestamp = new Date();
+    var filename = timestamp.getTime();
+    return filename;
+}
+
 function toggleRecording( e ) {
     var useWebsocket = true;
     if (e.classList.contains("recording")) {
@@ -92,8 +100,8 @@ function toggleRecording( e ) {
             return;
         e.classList.add("recording");
 	if(useWebsocket) {
-	    // sound is send in chunks 
-	    ws = new WebSocket("ws://localhost:8080/record");
+	    // sound is send in chunks
+	    ws = new WebSocket("ws://localhost:8080/recordings/" + getFilename());
 	    ws.binaryType = "blob"
 	    waitForSocketConnection(ws, function(){
 		chunkerId = setInterval( function(){
