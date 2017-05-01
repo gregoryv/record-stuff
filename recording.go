@@ -32,8 +32,14 @@ func init() {
 	}
 }
 
+// initRecordHandlers registers handlers related to recordings
 func initRecordHandlers(r *mux.Router) {
-	// Get one specific recording
+	initGetRecordingHandler(r)
+	initListHandler(r)
+	initSocketHandler(r)
+}
+
+func initGetRecordingHandler(r *mux.Router) {
 	upath := "/recordings/{name:[a-z]+}.wav"
 	r.PathPrefix(upath).Handler(
 		http.StripPrefix(
@@ -42,16 +48,12 @@ func initRecordHandlers(r *mux.Router) {
 		),
 	).Methods("GET")
 	api.Doc("GET", upath, "Returns the recorded audio")
+}
 
-	// List available recordings
-	upath = "/recordings/"
+func initListHandler(r *mux.Router) {
+	upath := "/recordings/"
 	r.HandleFunc(upath, listRecordings).Methods("GET")
 	api.Doc("GET", upath, "Returns list of all recordings").Resource = "Rec"
-
-	// Its up to the client to decide where the recording is saved
-	upath = "/recordings/{saveas:[a-z]+}"
-	r.Handle(upath, websocket.Handler(recordHandler))
-	api.Doc("", upath, "Websocket to stream audio to").Schemes = "ws"
 }
 
 // listRecordings writes json array of recordings
@@ -76,8 +78,15 @@ func listRecordings(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func initSocketHandler(r *mux.Router) {
+	// Its up to the client to decide where the recording is saved
+	upath := "/recordings/{saveas:[a-z]+}"
+	r.Handle(upath, websocket.Handler(socketHandler))
+	api.Doc("", upath, "Websocket to stream audio to").Schemes = "ws"
+}
+
 // The stream from a client will come in chunks
-func recordHandler(ws *websocket.Conn) {
+func socketHandler(ws *websocket.Conn) {
 	log.Print("Connected")
 	// Connection ends if nothing is received before deadline
 	deadline := time.Now().Add(time.Second * 5)

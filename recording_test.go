@@ -14,7 +14,7 @@ import (
 func Test_recordHandler(t *testing.T) {
 	// Setup service under test
 	r := mux.NewRouter()
-	initRecordHandlers(r)
+	initSocketHandler(r)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
