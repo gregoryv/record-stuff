@@ -79,8 +79,9 @@ func listRecordings(w http.ResponseWriter, r *http.Request) {
 }
 
 func initSocketHandler(r *mux.Router) {
-	// Its up to the client to decide where the recording is saved
-	upath := "/recordings/{saveas:[a-z]+}"
+	// The client tags a recording when streaming to it.
+	// When it's later retrieved, the client is redirected to a permanent location.
+	upath := "/recordings/{tag:[a-z0-9]+}"
 	r.Handle(upath, websocket.Handler(socketHandler))
 	api.Doc("", upath, "Websocket to stream audio to").Schemes = "ws"
 }
@@ -92,16 +93,20 @@ func socketHandler(ws *websocket.Conn) {
 	deadline := time.Now().Add(time.Second * 5)
 	ws.SetDeadline(deadline)
 
+	// File name combines tag and timestamp
 	uparts := mux.Vars(ws.Request())
-	filename := uparts["saveas"]
+	stamp := time.Now().UTC().Unix()
+	filename := fmt.Sprintf("%s-%d.wav", uparts["tag"], stamp)
 	tofile := path.Join(OUT, filename)
 	file, err := os.Create(tofile)
 	if err != nil {
 		panic(err)
 	}
 
+	// save stream as it comes in
 	for {
 		var data []byte
+		// todo
 		websocket.Message.Receive(ws, &data)
 		if len(data) == 0 {
 			// client closed connection
