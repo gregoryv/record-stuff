@@ -40,7 +40,7 @@ func initRecordHandlers(r *mux.Router) {
 }
 
 func initGetRecordingHandler(r *mux.Router) {
-	upath := "/recordings/{name:[a-z]+}.wav"
+	upath := `/recordings/{name:[a-z0-9\-]+}.wav`
 	r.PathPrefix(upath).Handler(
 		http.StripPrefix(
 			"/recordings/",
@@ -81,7 +81,7 @@ func listRecordings(w http.ResponseWriter, r *http.Request) {
 func initSocketHandler(r *mux.Router) {
 	// The client tags a recording when streaming to it.
 	// When it's later retrieved, the client is redirected to a permanent location.
-	upath := "/recordings/{tag:[a-z0-9]+}"
+	upath := `/recordings/{tag:[a-z0-9]+}`
 	r.Handle(upath, websocket.Handler(socketHandler))
 	api.Doc("", upath, "Websocket to stream audio to").Schemes = "ws"
 }

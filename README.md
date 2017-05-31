@@ -8,7 +8,8 @@ Learning from these links
 
 ## Getting started
 
-    git clone git@github.com:gregoryv/record-stuff.git
+	git clone git@github.com:gregoryv/record-stuff.git
+	go-bindata -o data.go static/...
 	go run main.go
 	
 Point your browser to  [http://localhost:8080](http://localhost:8080)
