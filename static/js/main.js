@@ -173,8 +173,7 @@ function loadRecordings() {
  $(function() {
      $.getJSON("/recordings/", function(data) {
 	 $(data).each(function(i, el) {
-	     var parts = el.name.split(".")
-	     newLi(el.href, new Date(+parts[0]));
+	     newLi(el.href, el.name);
 	 });
      });
  });

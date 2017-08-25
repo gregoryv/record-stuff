@@ -7,6 +7,10 @@ extension="${filename##*.}"
 nameonly="${filename%.*}"
 
 case $extension in
+    js)
+	go-bindata -o data.go static/...
+	go install github.com/gregoryv/record-stuff
+	;;
     go)
         gofmt -w $path
 	go-bindata -o data.go static/...
