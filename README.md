@@ -1,5 +1,7 @@
 # README
 
+Archived; educational project only.
+
 Learning from these links
 
 - [getusermedia](https://www.html5rocks.com/en/tutorials/getusermedia/intro/)
